@@ -13,7 +13,7 @@
 #include <sys/shm.h>
 
 #include "../include/init.h"
-#include "../include/socket_fct.h"
+#include "../include/print.h"
 
 int create_socket(char *ip, char *port, int flag)
 /* Creates a socket */
@@ -111,3 +111,43 @@ void init_server(int sock, int nb_connection)
 	socklen_t length=sizeof(struct sockaddr_in);
 	pid_t son_pid;
 	cli_t* cli;
+	
+	listen(sock, nb_connection);
+	printf("Waiting for connection...\n");
+
+	shm_id = create_shm();
+
+	while (1)
+	{
+		peer_sock = accept(sock, (struct sockaddr*) &address, &length);
+
+		if (peer_sock == -1)
+		{
+			close(peer_sock);
+			printf("Unable to accept connection\n");
+			perror("Error");
+		}
+	
+		son_pid = fork();
+
+		if (son_pid == -1)
+		{
+			close(peer_sock);
+			printf("Unable to call function fork\n");
+			perror("Error");
+		}
+
+		else if (son_pid == 0)
+		/* Son */
+		{
+			close(sock);
+		}
+
+		else
+		/* Father */
+		{
+			close(peer_sock);
+		}
+	}
+}
+
