@@ -13,7 +13,11 @@
 #include <sys/shm.h>
 
 #include "../include/init.h"
-#include "../include/print.h"
+#include "../include/misc.h"
+#include "../include/socket_fct.h"
+
+// init.c
+// Fonction d'initialisation
 
 int create_socket(char *ip, char *port, int flag)
 /* Creates a socket */
@@ -109,13 +113,23 @@ void init_server(int sock, int nb_connection)
 	int shm_id;
 	struct sockaddr_in address;
 	socklen_t length=sizeof(struct sockaddr_in);
-	pid_t son_pid;
+	pid_t child_pid;
 	cli_t* cli;
 	
 	listen(sock, nb_connection);
 	printf("Waiting for connection...\n");
 
 	shm_id = create_shm();
+	cli = shmat(shm_id, NULL, 0);
+
+	if (cli == (void*)-1)
+	{
+		printf("Unable to attach segment\n");
+		perror("Error");
+		exit(1);
+	}
+
+	init_shm(cli);
 
 	while (1)
 	{
@@ -126,26 +140,36 @@ void init_server(int sock, int nb_connection)
 			close(peer_sock);
 			printf("Unable to accept connection\n");
 			perror("Error");
+			exit(1);
 		}
 	
-		son_pid = fork();
+		child_pid = fork();
 
-		if (son_pid == -1)
+		if (child_pid == -1)
 		{
 			close(peer_sock);
 			printf("Unable to call function fork\n");
 			perror("Error");
+			exit(1);
 		}
 
-		else if (son_pid == 0)
-		/* Son */
+		else if (child_pid == 0)
+		/* Child */
 		{
 			close(sock);
+			fill_client_info(cli[0], peer_sock, 0, "NAME");
+			cli[0].socket = peer_sock;
+			strcpy(cli[0].name, "NAME");
+			//print_client_info(cli[0]);
+			server_communication(peer_sock);
+			exit(0);
 		}
 
 		else
 		/* Father */
 		{
+			print_client_info(cli[0]);
+			write(cli[0].socket, "hello", strlen("hello"));
 			close(peer_sock);
 		}
 	}

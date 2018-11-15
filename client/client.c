@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "socket_fct.h"
+#include "../include/misc.h"
+#include "../include/init.h"
+#include "../include/socket_fct.h"
 
 // client.c
 // usage: ./client [ip address] [port]

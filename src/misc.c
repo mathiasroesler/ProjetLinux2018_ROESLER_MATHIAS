@@ -4,8 +4,17 @@
 #include <fcntl.h>
 #include <string.h>
 
-#include "../include/print.h"
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <netinet/in.h>
+
+#include <sys/socket.h>
+
+#include "../include/misc.h"
 #include "../include/socket_fct.h"
+
+// misc.c
+// Fonction utiles
 
 int print_socket_info(int sock)
 /* Prints the socket information, IP address and port number */
@@ -62,3 +71,26 @@ int streq(char str[], int str_length)
 
 	return 0;
 }
+
+void fill_client_info(cli_t cli, int sock, int connected, char name[NAME_SIZE])
+{
+	cli.socket = sock;
+	cli.connected = connected;
+	strcpy(cli.name, name);
+}
+
+void init_shm(cli_t cli[4])
+{
+	for (int i=0; i<4; ++i)
+	{
+		fill_client_info(cli[i], 0, 0, "");
+	}
+}
+
+void print_client_info(cli_t cli)
+{
+	printf("Socket number: %d\n", cli.socket);
+	printf("Connected: %d\n", cli.connected);
+	printf("User name: %s\n", cli.name);
+}
+

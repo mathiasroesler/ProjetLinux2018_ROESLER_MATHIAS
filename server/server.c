@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "socket_fct.h"
+#include "../include/socket_fct.h"
+#include "../include/misc.h"
+#include "../include/init.h"
 
 // server.c
 // usage: ./server [ip address] [port]
@@ -9,7 +11,6 @@
 int main(int argc, char* argv[])
 {
 	int sock;
-	int peer_sock;
 	
 	if (argc != 3)
 	{
@@ -17,7 +18,7 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 	
-	sock = create_socket(argv[1], argv[2]);
+	sock = create_socket(argv[1], argv[2], BIND);
 
 	if (sock == -1)
 	{
@@ -27,10 +28,9 @@ int main(int argc, char* argv[])
 
 	print_socket_info(sock);
 
-	peer_sock = server_connection(sock, 2);
+	init_server(sock, 5); 
 
 	close(sock);
-	close(peer_sock);
 	exit(0);
 
 }

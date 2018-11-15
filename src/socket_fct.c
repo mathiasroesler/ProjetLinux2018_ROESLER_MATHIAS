@@ -11,7 +11,9 @@
 
 #include <sys/socket.h>
 
-#include "socket_fct.h"
+#include "../include/socket_fct.h"
+#include "../include/init.h"
+#include "../include/misc.h"
 
 #define BUFFER_SIZE 256
 
@@ -25,7 +27,7 @@ int server_connection(int sock, int nb_connection)
 	int id;
 	struct sockaddr_in address;
 	socklen_t length=sizeof(struct sockaddr_in);
-	pid_t son_pid;
+	pid_t child_pid;
 	cli_t* cli;
 	
 	
@@ -47,17 +49,17 @@ int server_connection(int sock, int nb_connection)
 		printf("Connection succesful with\n");
 		print_peer_info(peer_sock);
 
-		son_pid = fork();
+		child_pid = fork();
 
-		if (son_pid == -1)
+		if (child_pid == -1)
 		{
 			printf("Unable to call the function fork\n");
 			perror("Error");
 			return -1;
 		}
 
-		else if (son_pid == 0)
-		/* Son */
+		else if (child_pid == 0)
+		/* Child */
 		{
 			close(sock);
 			server_communication(peer_sock);
