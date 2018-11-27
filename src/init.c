@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <signal.h>
 #include <errno.h>
 
 #include <arpa/inet.h>
@@ -11,15 +12,21 @@
 
 #include <sys/socket.h>
 #include <sys/shm.h>
+#include <sys/stat.h>
 
 #include "../include/init.h"
 #include "../include/misc.h"
+#include "../include/shm_fct.h"
 #include "../include/socket_fct.h"
+
+#define MAX_CONNECTION 4
+
+int PID_ARRAY[MAX_CONNECTION];
 
 // init.c
 // Fonction d'initialisation
 
-int create_socket(char *ip, char *port, int flag)
+int createSocket(char *ip, char *port, int flag)
 /* Creates a socket */
 {
 	int sock;
@@ -37,10 +44,10 @@ int create_socket(char *ip, char *port, int flag)
 		return -1;
 	}
 
-	memset(&address, 0, length); 		   // Fill address with 0
-	address.sin_family = AF_INET; 		   // Set family
-	address.sin_port = htons(atoi(port));		   // Set port
-	inet_aton(ip, &address.sin_addr); // Set ip address
+	memset(&address, 0, length);		// Fill address with 0
+	address.sin_family = AF_INET; 		// Set family
+	address.sin_port = htons(atoi(port));	// Set port
+	inet_aton(ip, &address.sin_addr); 	// Set ip address
 
 	if (flag == BIND)
 	{
@@ -69,82 +76,81 @@ int create_socket(char *ip, char *port, int flag)
 	return sock;
 }
 
-int create_shm()
-/* Creates a shared memory */
+void sigHandler(int sig_nb)
 {
-	int id;			  // Shared memory id
-	int size=4*sizeof(cli_t); // Shared memory size
-	key_t key;		  // Shared memory key
+	int i, index=0;
 
-	key = ftok("init.c", 1);
-
-	id = shmget(key, size, 0666|IPC_CREAT|IPC_EXCL);
-
-	if (id == -1)
-	// Error while creating shared memory
+	while (PID_ARRAY[index] != 0)
 	{
-		if (errno == EEXIST)
-		// Shared memory exists
-		{
-			id = shmget(key, size, 0666|IPC_CREAT);
-			printf("Shared memory opened with id %d\n", id);
-			return id;
-		}
-
-		else
-		{
-			printf("Unable to create shared memory\n");
-			perror("Error");
-			return -1;
-		}
+		++index;
 	}
 
-	else
+	if (sig_nb == -1)
 	{
-		printf("Shared memory created with id %d\n");
-		return id;
-	}
-}
-
-void init_server(int sock, int nb_connection)
-/* Initializes the server */
-{
-	int peer_sock;
-	int shm_id;
-	struct sockaddr_in address;
-	socklen_t length=sizeof(struct sockaddr_in);
-	pid_t child_pid;
-	cli_t* cli;
-	
-	listen(sock, nb_connection);
-	printf("Waiting for connection...\n");
-
-	shm_id = create_shm();
-	cli = shmat(shm_id, NULL, 0);
-
-	if (cli == (void*)-1)
-	{
-		printf("Unable to attach segment\n");
+		printf("Signal unrecongnized\n");
 		perror("Error");
 		exit(1);
 	}
 
-	init_shm(cli);
+	else if (sig_nb == SIGUSR1)
+	{
+		signal(SIGUSR1, sigHandler);
+
+
+		if (index == 1)
+		{
+			printf("There is %d connection\n", index);
+		}
+		
+		else
+		{
+			printf("There are %d connections\n", index);
+		}
+	}
+
+	else if (sig_nb == SIGUSR2)
+	{
+		signal(SIGUSR2, sigHandler);
+	}
+}
+
+void initServer(int sock)
+/* Initializes the server */
+{
+	int peer_sock=0;
+	int peer_sock_mem[MAX_CONNECTION];
+	int i;
+	int shm_id=0;
+	int index=0;
+	int nb_connection=0;
+	char buffer[256];
+	struct sockaddr_in address;
+	socklen_t length=sizeof(struct sockaddr_in);
+	pid_t child_pid;
+	
+	listen(sock, 1);
 
 	while (1)
 	{
-		peer_sock = accept(sock, (struct sockaddr*) &address, &length);
-
-		if (peer_sock == -1)
+		do
 		{
-			close(peer_sock);
-			printf("Unable to accept connection\n");
-			perror("Error");
-			exit(1);
-		}
-	
-		child_pid = fork();
+			peer_sock = accept(sock, (struct sockaddr*) &address, &length);
 
+			if (peer_sock == -1)
+			{
+				close(peer_sock);
+				printf("Unable to accept connection\n");
+				perror("Error");
+				exit(1);
+			}
+
+			peer_sock_mem[nb_connection] = peer_sock;
+			++nb_connection;
+
+		} while (nb_connection%2 != 0);
+
+		child_pid = fork();
+		
 		if (child_pid == -1)
 		{
 			close(peer_sock);
@@ -157,20 +163,20 @@ void init_server(int sock, int nb_connection)
 		/* Child */
 		{
 			close(sock);
-			fill_client_info(cli[0], peer_sock, 0, "NAME");
-			cli[0].socket = peer_sock;
-			strcpy(cli[0].name, "NAME");
-			//print_client_info(cli[0]);
-			server_communication(peer_sock);
+			serverCommunication(peer_sock_mem[nb_connection-2], peer_sock_mem[nb_connection-1]);
 			exit(0);
 		}
 
 		else
 		/* Father */
 		{
-			print_client_info(cli[0]);
-			write(cli[0].socket, "hello", strlen("hello"));
 			close(peer_sock);
+
+			printf("pid %d\n", getpid());
+			signal(SIGUSR1, sigHandler);
+			signal(SIGUSR2, sigHandler);
+
+			PID_ARRAY[(nb_connection/2)-1] = child_pid;
 		}
 	}
 }

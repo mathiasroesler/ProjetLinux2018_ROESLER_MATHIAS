@@ -11,12 +11,11 @@
 #include <sys/socket.h>
 
 #include "../include/misc.h"
-#include "../include/socket_fct.h"
 
 // misc.c
 // Fonction utiles
 
-int print_socket_info(int sock)
+int printSocketInfo(int sock)
 /* Prints the socket information, IP address and port number */
 {
 	struct sockaddr_in address;
@@ -35,7 +34,7 @@ int print_socket_info(int sock)
 	return 0;
 }
 
-int print_peer_info(int sock)
+int printPeerInfo(int sock)
 /* Prints the peer information, IP address and port number */
 {
 	struct sockaddr_in address;
@@ -47,6 +46,11 @@ int print_peer_info(int sock)
 		perror("Error");
 		return -1;
 	}
+
+	printf("IP address : %s\n", inet_ntoa(address.sin_addr));
+	printf("Port : %u\n\n", ntohs(address.sin_port));
+	
+	return 0;
 }
 
 
@@ -72,25 +76,51 @@ int streq(char str[], int str_length)
 	return 0;
 }
 
-void fill_client_info(cli_t cli, int sock, int connected, char name[NAME_SIZE])
+int nbConnection(int *pid_mem, int max_connection)
 {
-	cli.socket = sock;
-	cli.connected = connected;
-	strcpy(cli.name, name);
+	int index=0, i;
+
+	while (i<max_connection)
+	{
+		printf("i=%d\n", i);
+		if (pid_mem[i] != 0)
+		{
+			++index;
+		}
+		++i;
+	}
+
+	return index;
 }
 
-void init_shm(cli_t cli[4])
+void strCat(char name[], char buffer[], char message[])
 {
-	for (int i=0; i<4; ++i)
+	int index=0, i=0, j=0;
+
+	for (i=0; i<strlen(name); ++i)
 	{
-		fill_client_info(cli[i], 0, 0, "");
+		message[i] = name[i];
+		++index;
+	}
+	
+	message[index] = ' ';
+
+	for (j=index+1; j<strlen(buffer)+index+1; ++j)
+	{
+		message[j] = buffer[j];
 	}
 }
 
-void print_client_info(cli_t cli)
-{
-	printf("Socket number: %d\n", cli.socket);
-	printf("Connected: %d\n", cli.connected);
-	printf("User name: %s\n", cli.name);
-}
 
+void setNonBlocking(int sock)
+/* Sets a socket to non-blocking mode */
+{
+	int flags=0;
+
+	flags = fcntl(sock, F_GETFL, 0);
+
+	if (flags != -1)
+	{
+		fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+	}
+}

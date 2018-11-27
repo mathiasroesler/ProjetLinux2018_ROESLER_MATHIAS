@@ -1,24 +1,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "../include/socket_fct.h"
+
 #include "../include/misc.h"
 #include "../include/init.h"
+#include "../include/socket_fct.h"
 
-// server.c
-// usage: ./server [ip address] [port]
+// client.c
+// usage: ./client [ip address] [port]
 
 int main(int argc, char* argv[])
 {
 	int sock;
-	
+
 	if (argc != 3)
 	{
-		printf("usage: ./server [ip address] [port]\n");
+		printf("usage: ./client [ip address] [port]\n");
 		exit(1);
 	}
-	
-	sock = create_socket(argv[1], argv[2], BIND);
+
+	sock = createSocket(argv[1], argv[2], CONNECT);
 
 	if (sock == -1)
 	{
@@ -26,11 +27,9 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 
-	print_socket_info(sock);
-
-	init_server(sock, 5); 
+	printSocketInfo(sock);
+	clientCommunication(sock);
 
 	close(sock);
 	exit(0);
-
 }
