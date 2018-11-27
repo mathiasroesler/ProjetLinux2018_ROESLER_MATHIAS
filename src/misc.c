@@ -76,42 +76,6 @@ int streq(char str[], int str_length)
 	return 0;
 }
 
-int nbConnection(int *pid_mem, int max_connection)
-{
-	int index=0, i;
-
-	while (i<max_connection)
-	{
-		printf("i=%d\n", i);
-		if (pid_mem[i] != 0)
-		{
-			++index;
-		}
-		++i;
-	}
-
-	return index;
-}
-
-void strCat(char name[], char buffer[], char message[])
-{
-	int index=0, i=0, j=0;
-
-	for (i=0; i<strlen(name); ++i)
-	{
-		message[i] = name[i];
-		++index;
-	}
-	
-	message[index] = ' ';
-
-	for (j=index+1; j<strlen(buffer)+index+1; ++j)
-	{
-		message[j] = buffer[j];
-	}
-}
-
-
 void setNonBlocking(int sock)
 /* Sets a socket to non-blocking mode */
 {

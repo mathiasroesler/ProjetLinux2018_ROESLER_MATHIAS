@@ -108,7 +108,7 @@ void clientCommunication(int peer_sock)
 	/* If first client then send first message */
 	{
 		read(peer_sock, buffer, NAME_SIZE);		// Get other client name
-		printf("Connected with %s");
+		printf("Connected with %s", buffer);
 		printf("Write message \n");
 
 		while(streq(buffer, strlen(buffer)) != 0)
@@ -130,7 +130,7 @@ void clientCommunication(int peer_sock)
 	/* If second client wait until message recieved */
 	{
 		read(peer_sock, buffer, NAME_SIZE);		// Get other client name
-		printf("Connected with %s");
+		printf("Connected with %s", buffer);
 		printf("Wait for message\n");
 
 		while(streq(buffer, strlen(buffer)) != 0)

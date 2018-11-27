@@ -16,7 +16,6 @@
 
 #include "../include/init.h"
 #include "../include/misc.h"
-#include "../include/shm_fct.h"
 #include "../include/socket_fct.h"
 
 #define MAX_CONNECTION 4
@@ -76,9 +75,9 @@ int createSocket(char *ip, char *port, int flag)
 	return sock;
 }
 
-void sigHandler(int sig_nb)
+void sigHandler(int sig_nb) 
 {
-	int i, index=0;
+	int index=0;
 
 	while (PID_ARRAY[index] != 0)
 	{
@@ -119,11 +118,7 @@ void initServer(int sock)
 {
 	int peer_sock=0;
 	int peer_sock_mem[MAX_CONNECTION];
-	int i;
-	int shm_id=0;
-	int index=0;
 	int nb_connection=0;
-	char buffer[256];
 	struct sockaddr_in address;
 	socklen_t length=sizeof(struct sockaddr_in);
 	pid_t child_pid;
