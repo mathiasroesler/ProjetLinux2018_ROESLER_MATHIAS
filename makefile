@@ -1,23 +1,37 @@
-export CC = gcc
-export CFLAGS =
-export LDFLAGS = 
-DIR1 = server 
-DIR2 = client
-EXEC = project
+CC = gcc
+CFLAGS = -Wall -Werror
+C_DIR = src
+H_DIR = include
+HEADER = $(wildcard $(H_DIR)/*.h)
+SRC_SERVER = $(wildcard $(C_DIR)/*.c) server.c
+OBJ_SERVER = $(SRC_SERVER:.c=.o)
+SRC_CLIENT = $(wildcard $(C_DIR)/*.c) client.c
+OBJ_CLIENT = $(SRC_CLIENT:.c=.o)
+EXEC = server client
 
 all: $(EXEC)
 
-$(EXEC): 
-	@(cd $(DIR1) && $(MAKE))
-	@(cd $(DIR2) && $(MAKE))
+server: $(OBJ_SERVER)
+	@$(CC) -o $@ $^
+
+server.o: $(HEADER)
+
+%.o: %.c
+	@$(CC) -o $@ -c $< $(CFLAGS)
+
+client: $(OBJ_CLIENT)
+	@$(CC) -o $@ $^
+
+client.o: $(HEADER)
+
+%.o: %.c
+	@$(CC) -o $@ -c $< $(CFLAGS)
 
 
 .PHONY: clean mrproper
 
 clean:
-	@(cd $(DIR1) && $(MAKE) $@)
-	@(cd $(DIR2) && $(MAKE) $@)
+	@rm -rf $(C_DIR)/*.o *.o
 
 mrproper: clean
-	@(cd $(DIR1) && $(MAKE) $@)
-	@(cd $(DIR2) && $(MAKE) $@)
+	@rm -rf $(EXEC)

@@ -11,76 +11,50 @@
 
 #include <sys/socket.h>
 
-#include "../include/socket_fct.h"
-#include "../include/init.h"
 #include "../include/misc.h"
+#include "../include/communication.h"
 
-#define BUFFER_SIZE 256
-
-// socket_fct.c
-// Contains the function to create a socket, a client and a server
+/* communication.c
+ * 
+ * Contains the function for communication between client and server.
+ *
+ * Author: Mathias ROESLER
+ * Date: December 2018
+*/
 
 void serverCommunication(int client1_sock, int client2_sock)
-/* Server communication */
+/* Function called in the server program to set up 
+ * communication between two clients.
+*/
 {
-	char buffer[BUFFER_SIZE];
+	char buffer_client1[BUFFER_SIZE];
+	char buffer_client2[BUFFER_SIZE];
 
 	/* Signal clients that they are connected */
 	write(client1_sock, "1", sizeof("1"));
 	write(client2_sock, "2", sizeof("2"));
 
 	/* Retrieve and send client names */
-	read(client1_sock, buffer, NAME_SIZE);
-	write(client2_sock, buffer, NAME_SIZE);
-	read(client2_sock, buffer, NAME_SIZE);
-	write(client1_sock, buffer, NAME_SIZE);
+	read(client1_sock, buffer_client1, NAME_SIZE);
+	write(client2_sock, buffer_client1, NAME_SIZE);
+	read(client2_sock, buffer_client2, NAME_SIZE);
+	write(client1_sock, buffer_client2, NAME_SIZE);
 
-	while(streq(buffer, strlen(buffer)) != 0)
+	while(streq(buffer_client1, strlen(buffer_client1)) != 0 || streq(buffer_client2, strlen(buffer_client2)) != 0)
 	{
-		read(client1_sock, buffer, BUFFER_SIZE);	// Get message from client 1
-		write(client2_sock, buffer, BUFFER_SIZE);	// Send message to client 2
-		read(client1_sock, buffer, BUFFER_SIZE);	// Get answer from client 2
-		write(client2_sock, buffer, BUFFER_SIZE);	// Send answer to client 1
+		read(client1_sock, buffer_client1, BUFFER_SIZE);	// Get message from client 1
+		write(client2_sock, buffer_client1, BUFFER_SIZE);	// Send message to client 2
+		read(client2_sock, buffer_client2, BUFFER_SIZE);	// Get answer from client 2
+		write(client1_sock, buffer_client2, BUFFER_SIZE);	// Send answer to client 1
 	}
+
+	printf("Quit\n");
 }
 
-int clientConnection(char *ip, char *port)
-/* Sets up the client */
-{
-	int sock;
-	struct sockaddr_in address;
-	socklen_t length=sizeof(struct sockaddr_in);
-
-	sock = socket(AF_INET, SOCK_STREAM, 0);
-
-	if (sock == -1)
-	// Check the creation of the socket
-	{
-		close(sock);
-		printf("Unable to create socket\n");
-		perror("Error");
-		return -1;
-	}
-
-	memset(&address, 0, length); 		// Fill address with 0
-	address.sin_family = AF_INET; 		// Set family
-	address.sin_port = htons(atoi(port));	// Set port
-	inet_aton(ip, &address.sin_addr); 	// Set ip address
-	
-	if (connect(sock, (struct sockaddr*) &address, length) == -1)
-	{
-		close(sock);
-		printf("Unable to connect socket %d\n", sock);
-		perror("Error");
-		return -1;
-	}
-
-	return sock;
-
-}	
-
 void clientCommunication(int peer_sock)
-/* Client communication */
+/* Function called in the client program to set up
+ * communication between a client and the server.
+*/
 {
 	char name[NAME_SIZE];
 	char buffer[BUFFER_SIZE];
@@ -114,10 +88,12 @@ void clientCommunication(int peer_sock)
 		while(streq(buffer, strlen(buffer)) != 0)
 		{
 			memset(buffer, 0, sizeof(buffer));	// Clear buffer
+			memset(message, 0, sizeof(message));
 
 			printf("%s", name);
 			fgets(buffer, BUFFER_SIZE, stdin); 	// Recuperate message from input
 			
+			strcpy(message, name);
 			strcat(message, buffer);		// Prepare message for sending
 
 			write(peer_sock, message, BUFFER_SIZE); // Send message
@@ -139,10 +115,12 @@ void clientCommunication(int peer_sock)
 			printf("%s", buffer);
 
 			memset(buffer, 0, sizeof(buffer));	// Clear buffer
+			memset(message, 0, sizeof(message));
 			
 			printf("%s", name);
 			fgets(buffer, BUFFER_SIZE, stdin); 	// Recuperate message from input
-
+			
+			strcpy(message, name);
 			strcat(message, buffer);		// Prepare message for sending
 
 			write(peer_sock, message, BUFFER_SIZE); // Send message

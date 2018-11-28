@@ -12,16 +12,23 @@
 
 #include "../include/misc.h"
 
-// misc.c
-// Fonction utiles
+/* misc.c
+ *
+ * Contains miscellanous function that are used
+ * by the client or the server.
+ *
+ * Author: Mathias ROESLER
+ * Date: December 2018
+*/
 
 int printSocketInfo(int sock)
-/* Prints the socket information, IP address and port number */
+/* Prints the socket information, IP address and port number. */
 {
 	struct sockaddr_in address;
 	socklen_t length=sizeof(struct sockaddr_in);
 
 	if (getsockname(sock, (struct sockaddr*) &address, &length) == -1)
+	/* Retrieve socket information and store it in address */
 	{
 		printf("Unable to retrieve the information of socket %d\n", sock);
 		perror("Error");
@@ -35,12 +42,13 @@ int printSocketInfo(int sock)
 }
 
 int printPeerInfo(int sock)
-/* Prints the peer information, IP address and port number */
+/* Prints the peer information, IP address and port number. */
 {
 	struct sockaddr_in address;
 	socklen_t length=sizeof(struct sockaddr_in);
 
 	if (getpeername(sock, (struct sockaddr*) &address, &length) == -1)
+	/* Retrieve socket information and store it in address */
 	{
 		printf("Unable to retrieve the information of peer %d\n", sock);
 		perror("Error");
@@ -55,7 +63,7 @@ int printPeerInfo(int sock)
 
 
 int streq(char str[], int str_length)
-/* Compares str with exit */
+/* Compares str with the exit. */
 {
 	char str_exit[]="exit\n";
 	int exit_length=strlen(str_exit);
@@ -74,17 +82,4 @@ int streq(char str[], int str_length)
 	}
 
 	return 0;
-}
-
-void setNonBlocking(int sock)
-/* Sets a socket to non-blocking mode */
-{
-	int flags=0;
-
-	flags = fcntl(sock, F_GETFL, 0);
-
-	if (flags != -1)
-	{
-		fcntl(sock, F_SETFL, flags | O_NONBLOCK);
-	}
 }

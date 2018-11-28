@@ -5,7 +5,6 @@
 #define CONNECT 1
 
 int createSocket(char* ip, char* port, int flag);
-int createShm();
-void initServer(int sock);
+void createServer(int sock);
 
 #endif /* INIT_H */

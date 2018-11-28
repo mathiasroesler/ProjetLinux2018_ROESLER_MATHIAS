@@ -14,19 +14,30 @@
 #include <sys/shm.h>
 #include <sys/stat.h>
 
-#include "../include/init.h"
+#include "../include/create.h"
 #include "../include/misc.h"
-#include "../include/socket_fct.h"
+#include "../include/communication.h"
 
 #define MAX_CONNECTION 4
 
-int PID_ARRAY[MAX_CONNECTION];
+int PID_ARRAY[MAX_CONNECTION/2];
+int NB_CONNECTION;
 
-// init.c
-// Fonction d'initialisation
+/* create.c
+ *
+ * Contains the function that create the objects 
+ * necessary for the client and the server.
+ *
+ * Author: Mathias ROESLER
+ * Date: December 2018
+*/
 
 int createSocket(char *ip, char *port, int flag)
-/* Creates a socket */
+/* Function called to create a socket with a certain
+ * ip address and a certain port number.
+ * The socket can either be bound or connected
+ * depending on the value of flag.
+*/
 {
 	int sock;
 	struct sockaddr_in address;
@@ -77,13 +88,6 @@ int createSocket(char *ip, char *port, int flag)
 
 void sigHandler(int sig_nb) 
 {
-	int index=0;
-
-	while (PID_ARRAY[index] != 0)
-	{
-		++index;
-	}
-
 	if (sig_nb == -1)
 	{
 		printf("Signal unrecongnized\n");
@@ -91,47 +95,61 @@ void sigHandler(int sig_nb)
 		exit(1);
 	}
 
-	else if (sig_nb == SIGUSR1)
+	else if (sig_nb == SIGUSR2)
+	/* User signal 2, prints number of connections to server */
 	{
-		signal(SIGUSR1, sigHandler);
+		signal(SIGUSR2, sigHandler);
 
-
-		if (index == 1)
+		if (NB_CONNECTION == 1)
 		{
-			printf("There is %d connection\n", index);
+			printf("There is %d client connected\n", NB_CONNECTION);
 		}
 		
 		else
 		{
-			printf("There are %d connections\n", index);
+			printf("There are %d clients connected\n", NB_CONNECTION);
 		}
 	}
 
-	else if (sig_nb == SIGUSR2)
+	else if (sig_nb == SIGUSR1)
+	/* User signal 1, closes all the connections */
 	{
-		signal(SIGUSR2, sigHandler);
+		signal(SIGUSR1, sigHandler);
+		kill(PID_ARRAY[0], SIGUSR1);
 	}
 }
 
-void initServer(int sock)
-/* Initializes the server */
+void sigHandlerChild(int sig_nb)
+{
+	if (sig_nb == SIGUSR1)
+	{
+		printf("Received\n");
+	}
+}
+
+void createServer(int sock)
+/* Function called to create a server. */
 {
 	int peer_sock=0;
 	int peer_sock_mem[MAX_CONNECTION];
-	int nb_connection=0;
 	struct sockaddr_in address;
 	socklen_t length=sizeof(struct sockaddr_in);
 	pid_t child_pid;
 	
 	listen(sock, 1);
 
+	signal(SIGUSR1, sigHandler);
+	signal(SIGUSR2, sigHandler);
+
 	while (1)
 	{
 		do
+		/* Wait for two clients to connect */
 		{
 			peer_sock = accept(sock, (struct sockaddr*) &address, &length);
 
 			if (peer_sock == -1)
+			/* Check if connection is refused */
 			{
 				close(peer_sock);
 				printf("Unable to accept connection\n");
@@ -139,14 +157,15 @@ void initServer(int sock)
 				exit(1);
 			}
 
-			peer_sock_mem[nb_connection] = peer_sock;
-			++nb_connection;
+			peer_sock_mem[NB_CONNECTION] = peer_sock;	// Store client socket number
+			++NB_CONNECTION;				
 
-		} while (nb_connection%2 != 0);
+		} while (NB_CONNECTION%2 != 0);
 
 		child_pid = fork();
 		
 		if (child_pid == -1)
+		/* Check if call to fork is unsuccesful */
 		{
 			close(peer_sock);
 			printf("Unable to call function fork\n");
@@ -157,8 +176,9 @@ void initServer(int sock)
 		else if (child_pid == 0)
 		/* Child */
 		{
+			signal(SIGUSR1, sigHandlerChild);
 			close(sock);
-			serverCommunication(peer_sock_mem[nb_connection-2], peer_sock_mem[nb_connection-1]);
+			serverCommunication(peer_sock_mem[NB_CONNECTION-2], peer_sock_mem[NB_CONNECTION-1]);
 			exit(0);
 		}
 
@@ -166,12 +186,7 @@ void initServer(int sock)
 		/* Father */
 		{
 			close(peer_sock);
-
-			printf("pid %d\n", getpid());
-			signal(SIGUSR1, sigHandler);
-			signal(SIGUSR2, sigHandler);
-
-			PID_ARRAY[(nb_connection/2)-1] = child_pid;
+			PID_ARRAY[(NB_CONNECTION/2)-1] = child_pid; // Store child PID
 		}
 	}
 }
