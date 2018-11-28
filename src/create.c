@@ -178,7 +178,10 @@ void createServer(int sock)
 		{
 			signal(SIGUSR1, sigHandlerChild);
 			close(sock);
+			printf("Connected\n");
 			serverCommunication(peer_sock_mem[NB_CONNECTION-2], peer_sock_mem[NB_CONNECTION-1]);
+			NB_CONNECTION -= 2;
+			printf("Connection terminated%d\n", NB_CONNECTION);
 			exit(0);
 		}
 
