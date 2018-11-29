@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 	
-	sock = createSocket(argv[1], argv[2], BIND); // Creates socket and binds it
+	sock = createSocket(argv[1], argv[2], BIND); // Creates a socket and binds it
 
 	if (sock == -1)
 	/* Check if socket is created properly */
@@ -35,9 +35,8 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 
-	printSocketInfo(sock);
-
-	createServer(sock); 
+	//printSocketInfo(sock);	// Prints the servers socket information
+	createServer(sock);		// Creates the server
 
 	close(sock);
 	exit(0);

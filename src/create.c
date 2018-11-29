@@ -95,9 +95,16 @@ void sigHandler(int sig_nb)
 		exit(1);
 	}
 
-	else if (sig_nb == SIGUSR2)
-	/* User signal 2, prints number of connections to server */
+	switch (sig_nb)
 	{
+
+	case SIGINT:
+		signal(SIGINT, sigHandler);
+
+		NB_CONNECTION -= 2;
+		break;
+
+	case SIGUSR2:
 		signal(SIGUSR2, sigHandler);
 
 		if (NB_CONNECTION == 1)
@@ -109,13 +116,11 @@ void sigHandler(int sig_nb)
 		{
 			printf("There are %d clients connected\n", NB_CONNECTION);
 		}
-	}
+		break;
 
-	else if (sig_nb == SIGUSR1)
-	/* User signal 1, closes all the connections */
-	{
-		signal(SIGUSR1, sigHandler);
-		kill(PID_ARRAY[0], SIGUSR1);
+	case SIGUSR1:
+		kill(PID_ARRAY[0], SIGCHLD);
+		break;
 	}
 }
 
@@ -140,12 +145,15 @@ void createServer(int sock)
 
 	signal(SIGUSR1, sigHandler);
 	signal(SIGUSR2, sigHandler);
+	signal(SIGINT, sigHandler);
 
 	while (1)
 	{
 		do
 		/* Wait for two clients to connect */
 		{
+			while(NB_CONNECTION == MAX_CONNECTION); // Wait until connection is available
+
 			peer_sock = accept(sock, (struct sockaddr*) &address, &length);
 
 			if (peer_sock == -1)
@@ -178,17 +186,18 @@ void createServer(int sock)
 		{
 			signal(SIGUSR1, sigHandlerChild);
 			close(sock);
-			printf("Connected\n");
 			serverCommunication(peer_sock_mem[NB_CONNECTION-2], peer_sock_mem[NB_CONNECTION-1]);
-			NB_CONNECTION -= 2;
-			printf("Connection terminated%d\n", NB_CONNECTION);
+			kill(getppid(), SIGINT);
 			exit(0);
 		}
 
 		else
 		/* Father */
 		{
-			close(peer_sock);
+			/* Close unused connections */
+			close(peer_sock_mem[NB_CONNECTION-2]);
+			close(peer_sock_mem[NB_CONNECTION-1]);
+
 			PID_ARRAY[(NB_CONNECTION/2)-1] = child_pid; // Store child PID
 		}
 	}

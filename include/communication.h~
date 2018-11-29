@@ -4,7 +4,7 @@
 #define NAME_SIZE 15
 #define BUFFER_SIZE 512
 
-int serverCommunication(int client1_sock, int client2_sock); 
-int clientCommunication(int peer_sock);
+void serverCommunication(int client1_sock, int client2_sock); 
+void clientCommunication(int peer_sock);
 
 #endif /* COMMUNICATION_H */

@@ -36,9 +36,10 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 
-	printSocketInfo(sock);
-	clientCommunication(sock);
-
+	//printSocketInfo(sock);	// Prints the clients socket information
+	clientCommunication(sock);	// Starts the communication with the server
+	printf("Have a nice day.\n");
+	
 	close(sock);
 	exit(0);
 }

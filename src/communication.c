@@ -22,22 +22,40 @@
  * Date: December 2018
 */
 
-void serverCommunication(int client1_sock, int client2_sock)
+int serverCommunication(int client1_sock, int client2_sock)
 /* Function called in the server program to set up 
  * communication between two clients.
 */
 {
 	char client1_buffer[BUFFER_SIZE];
 	char client2_buffer[BUFFER_SIZE];
+	int nb1, nb2;
 
 	/* Signal clients that they are connected */
 	write(client1_sock, "1", sizeof("1"));
 	write(client2_sock, "2", sizeof("2"));
 
+
 	/* Retrieve and send client names */
-	read(client1_sock, client1_buffer, NAME_SIZE);
+	nb1=read(client1_sock, client1_buffer, NAME_SIZE);
+
+	if (nb1 == 0)
+	/* If client1 exits prematurely end connection */
+	{
+		write(client2_sock, "exit\n", NAME_SIZE);
+		return -1;
+	}
+
 	write(client2_sock, client1_buffer, NAME_SIZE);
-	read(client2_sock, client2_buffer, NAME_SIZE);
+	nb2=read(client2_sock, client2_buffer, NAME_SIZE);
+
+	if (nb2 == 0)
+	/* If client2 exits prematurely end connection */
+	{
+		write(client1_sock, "exit\n", NAME_SIZE);
+		return -1;
+	}
+
 	write(client1_sock, client2_buffer, NAME_SIZE);
 
 	while(1)
@@ -63,9 +81,10 @@ void serverCommunication(int client1_sock, int client2_sock)
 
 		write(client1_sock, client2_buffer, BUFFER_SIZE);	// Send answer to client 1
 	}
+	return 0;
 }
 
-void clientCommunication(int peer_sock)
+int clientCommunication(int peer_sock)
 /* Function called in the client program to set up
  * communication between a client and the server.
 */
@@ -74,8 +93,7 @@ void clientCommunication(int peer_sock)
 	char buffer[BUFFER_SIZE];
 	char message[BUFFER_SIZE];
 	char client_num[1];
-	int name_size=0;
-	int num=0;
+	int name_size=0, num=0;
 
 	printf("Welcome, please enter your name:\n");
 	fgets(name, BUFFER_SIZE, stdin);		// Get client name
@@ -95,9 +113,20 @@ void clientCommunication(int peer_sock)
 	/* If first client then send first message */
 	{
 		read(peer_sock, buffer, NAME_SIZE);		// Get other client name
-		printf("\nConnected with %s", buffer);
-		printf("To quit, type exit.\n");
-		printf("Please write a message.\n\n");
+
+		if (streq(buffer, strlen(buffer)) == 0)
+		/* If client2 exits prematurely end connection */
+		{
+			printf("Error with connection, please try to connect again.\n");
+			return -1;
+		}
+
+		else 
+		{
+			printf("\nConnected with %s", buffer);
+			printf("To quit, type exit.\n");
+			printf("Please write a message.\n\n");
+		}
 
 		while(1)
 		{
@@ -112,7 +141,7 @@ void clientCommunication(int peer_sock)
 			/* If message is exit */
 			{
 				write(peer_sock, buffer, BUFFER_SIZE);
-				exit(0);
+				break;
 			}
 			
 			/* Prepare message for sending */
@@ -125,7 +154,7 @@ void clientCommunication(int peer_sock)
 			if (streq(buffer, strlen(buffer)) == 0)
 			{
 				printf("The connection was terminated by other client.\n");
-				exit(0);
+				break;
 			}
 
 			printf("> %s", buffer);			
@@ -136,9 +165,20 @@ void clientCommunication(int peer_sock)
 	/* If second client wait until message recieved */
 	{
 		read(peer_sock, buffer, NAME_SIZE);		// Get other client name
-		printf("\nConnected with %s", buffer);
-		printf("To quit, type exit.\n");
-		printf("Please wait for a message.\n\n");
+
+		if (streq(buffer, strlen(buffer)) == 0)
+		/* If client1 exits prematurely end connection */
+		{
+			printf("Error with connection, please try to connect again.\n");
+			return -1;
+		}
+		
+		else 
+		{
+			printf("\nConnected with %s", buffer);
+			printf("To quit, type exit.\n");
+			printf("Please wait for a message.\n\n");
+		}
 
 		while(1)
 		{
@@ -173,4 +213,6 @@ void clientCommunication(int peer_sock)
 			write(peer_sock, message, BUFFER_SIZE); // Send message
 		}
 	}
+
+	return 0;
 }
