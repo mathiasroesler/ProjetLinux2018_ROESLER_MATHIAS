@@ -214,6 +214,7 @@ void sigHandler(int sig_nb)
 			wait(&status);
 		}
 
+		printf("Closing server\n");
 		kill(getpid(), SIGTERM);
 		break;
 	}

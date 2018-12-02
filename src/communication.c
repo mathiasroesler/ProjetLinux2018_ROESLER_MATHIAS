@@ -6,12 +6,6 @@
 #include <signal.h>
 #include <errno.h>
 
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <netinet/in.h>
-
-#include <sys/socket.h>
-
 #include "../include/misc.h"
 #include "../include/communication.h"
 
@@ -30,6 +24,8 @@ int serverCommunication(int client1_sock, int client2_sock)
  * communication between two clients.
 */
 {
+	char client1_name[NAME_SIZE];
+	char client2_name[NAME_SIZE];
 	char client1_buffer[BUFFER_SIZE];
 	char client2_buffer[BUFFER_SIZE];
 	int nb1, nb2;
@@ -42,7 +38,7 @@ int serverCommunication(int client1_sock, int client2_sock)
 
 
 	/* Retrieve and send client names */
-	nb1=read(client1_sock, client1_buffer, NAME_SIZE);
+	nb1=read(client1_sock, client1_name, NAME_SIZE);
 
 	if (nb1 == 0)
 	/* If client1 exited prematurely, end connection */
@@ -51,8 +47,8 @@ int serverCommunication(int client1_sock, int client2_sock)
 		return -1;
 	}
 
-	write(client2_sock, client1_buffer, NAME_SIZE);
-	nb2=read(client2_sock, client2_buffer, NAME_SIZE);
+	write(client2_sock, client1_name, NAME_SIZE);
+	nb2=read(client2_sock, client2_name, NAME_SIZE);
 
 	if (nb2 == 0)
 	/* If client2 exited prematurely, end connection */
@@ -61,7 +57,7 @@ int serverCommunication(int client1_sock, int client2_sock)
 		return -1;
 	}
 
-	write(client1_sock, client2_buffer, NAME_SIZE);
+	write(client1_sock, client2_name, NAME_SIZE);
 
 	while(1)
 	{
@@ -120,13 +116,14 @@ int clientCommunication(int peer_sock)
 	char client_num[1];
 	int name_size=0, num=0;
 
-	printf("Welcome, please enter your name:\n");
-	fgets(name, NAME_SIZE, stdin);		// Get client name
+	printf("Welcome to the message service.\n");
 
-	printf("\nThank you, waiting for another client...\n");
+	printf("\nPlease be patient, we are waiting for another client...\n");
 	read(peer_sock, client_num, sizeof("1")); 	// Wait until another client is connected
 	num = atoi(client_num);
 
+	printf("Thank you for waiting, please enter your name: ");
+	fgets(name, NAME_SIZE, stdin);			// Get client name
 	write(peer_sock, name, NAME_SIZE); 		// Sends client name to other client
 
 	/* Resize name */
@@ -148,7 +145,7 @@ int clientCommunication(int peer_sock)
 
 		else 
 		{
-			printf("\nConnected with %s", buffer);
+			printf("\nYou are now connected with %s", buffer);
 			printf("To quit, type exit.\n");
 			printf("Please write a message.\n\n");
 		}
@@ -208,7 +205,7 @@ int clientCommunication(int peer_sock)
 		
 		else 
 		{
-			printf("\nConnected with %s", buffer);
+			printf("\nYou are now connected with %s", buffer);
 			printf("To quit, type exit.\n");
 			printf("Please wait for a message.\n\n");
 		}
