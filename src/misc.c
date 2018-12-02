@@ -62,7 +62,7 @@ int printPeerInfo(int sock)
 }
 
 
-int streq(char str[], int str_length)
+int streqExit(char str[], int str_length)
 /* Compares str with the exit. */
 {
 	char str_exit[]="exit\n";
@@ -76,6 +76,28 @@ int streq(char str[], int str_length)
 	for (int i=0; i<str_length; ++i)
 	{
 		if (str[i] != str_exit[i])
+		{
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+int streqClose(char str[], int str_length)
+/* Compares str with the exit. */
+{
+	char str_close[]="close";
+	int close_length=strlen(str_close);
+
+	if (str_length != close_length)
+	{
+		return -1;
+	}
+
+	for (int i=0; i<str_length; ++i)
+	{
+		if (str[i] != str_close[i])
 		{
 			return -1;
 		}

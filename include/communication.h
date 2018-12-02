@@ -6,5 +6,6 @@
 
 int serverCommunication(int client1_sock, int client2_sock); 
 int clientCommunication(int peer_sock);
+void sigHandlerChild(int sig_num);
 
 #endif /* COMMUNICATION_H */

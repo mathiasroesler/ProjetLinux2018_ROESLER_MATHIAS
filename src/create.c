@@ -11,17 +11,12 @@
 #include <netinet/in.h>
 
 #include <sys/socket.h>
-#include <sys/shm.h>
+#include <sys/wait.h>
 #include <sys/stat.h>
 
 #include "../include/create.h"
 #include "../include/misc.h"
 #include "../include/communication.h"
-
-#define MAX_CONNECTION 4
-
-int PID_ARRAY[MAX_CONNECTION/2];
-int NB_CONNECTION;
 
 /* create.c
  *
@@ -31,6 +26,9 @@ int NB_CONNECTION;
  * Author: Mathias ROESLER
  * Date: December 2018
 */
+
+int PID_ARRAY[MAX_CONNECTION/2];
+int NB_CONNECTION;
 
 int createSocket(char *ip, char *port, int flag)
 /* Function called to create a socket with a certain
@@ -86,56 +84,10 @@ int createSocket(char *ip, char *port, int flag)
 	return sock;
 }
 
-void sigHandler(int sig_nb) 
-{
-	if (sig_nb == -1)
-	{
-		printf("Signal unrecongnized\n");
-		perror("Error");
-		exit(1);
-	}
-
-	switch (sig_nb)
-	{
-
-	case SIGINT:
-		signal(SIGINT, sigHandler);
-
-		NB_CONNECTION -= 2;
-		break;
-
-	case SIGUSR2:
-		signal(SIGUSR2, sigHandler);
-
-		if (NB_CONNECTION == 1)
-		{
-			printf("There is %d client connected\n", NB_CONNECTION);
-		}
-		
-		else
-		{
-			printf("There are %d clients connected\n", NB_CONNECTION);
-		}
-		break;
-
-	case SIGUSR1:
-		kill(PID_ARRAY[0], SIGCHLD);
-		break;
-	}
-}
-
-void sigHandlerChild(int sig_nb)
-{
-	if (sig_nb == SIGUSR1)
-	{
-		printf("Received\n");
-	}
-}
-
 void createServer(int sock)
 /* Function called to create a server. */
 {
-	int peer_sock=0;
+	int peer_sock=0, i=0;
 	int peer_sock_mem[MAX_CONNECTION];
 	struct sockaddr_in address;
 	socklen_t length=sizeof(struct sockaddr_in);
@@ -143,9 +95,10 @@ void createServer(int sock)
 	
 	listen(sock, 1);
 
+	/* Set traps for different signals */
 	signal(SIGUSR1, sigHandler);
 	signal(SIGUSR2, sigHandler);
-	signal(SIGINT, sigHandler);
+	signal(SIGTSTP, sigHandler);
 
 	while (1)
 	{
@@ -175,7 +128,13 @@ void createServer(int sock)
 		if (child_pid == -1)
 		/* Check if call to fork is unsuccesful */
 		{
-			close(peer_sock);
+			/* Close all  connections */
+			for (i=0; i<MAX_CONNECTION; ++i)
+			{
+				close(peer_sock_mem[i]);
+			}
+			close(sock);
+
 			printf("Unable to call function fork\n");
 			perror("Error");
 			exit(1);
@@ -184,11 +143,16 @@ void createServer(int sock)
 		else if (child_pid == 0)
 		/* Child */
 		{
-			signal(SIGUSR1, sigHandlerChild);
-			close(sock);
+			close(sock);	// Close unused connection
 			serverCommunication(peer_sock_mem[NB_CONNECTION-2], peer_sock_mem[NB_CONNECTION-1]);
-			kill(getppid(), SIGINT);
-			exit(0);
+			kill(getppid(), SIGTSTP); // Signal server that task is done
+
+			for (i=0; i<MAX_CONNECTION; ++i)
+			/* Close all connections */
+			{
+				close(peer_sock_mem[i]);
+			}
+			break;
 		}
 
 		else
@@ -203,3 +167,54 @@ void createServer(int sock)
 	}
 }
 
+void sigHandler(int sig_nb) 
+/* Signal handler function for different signals that can
+ * be sent to the father.
+*/
+{
+	int status=0, i=0;
+
+	if (sig_nb == -1)
+	{
+		printf("Signal unrecongnized\n");
+		perror("Error");
+		exit(1);
+	}
+
+	switch (sig_nb)
+	{
+
+	case SIGTSTP:
+	/* Reduce number of connections when a child is done */
+		signal(SIGTSTP, sigHandler);	// Reset trap for SIGUSR1
+
+		NB_CONNECTION -= 2;
+		break;
+
+	case SIGUSR2:
+	/* Print the number of connections to the server */
+		signal(SIGUSR2, sigHandler);	// Reset trap for SIGUSR2
+
+		if (NB_CONNECTION == 1)
+		{
+			printf("There is %d client connected\n", NB_CONNECTION);
+		}
+		
+		else
+		{
+			printf("There are %d clients connected\n", NB_CONNECTION);
+		}
+		break;
+
+	case SIGUSR1:
+	/* Terminated the server and warn children */	
+		for (i=0; i<MAX_CONNECTION/2; ++i)
+		{
+			kill(PID_ARRAY[i], SIGUSR1);
+			wait(&status);
+		}
+
+		kill(getpid(), SIGTERM);
+		break;
+	}
+}

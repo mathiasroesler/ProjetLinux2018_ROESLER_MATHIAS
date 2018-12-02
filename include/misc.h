@@ -3,6 +3,7 @@
 
 int printSocketInfo(int sock);
 int printPeerInfo(int peer_sock);
-int streq(char str[], int str_length);
+int streqExit(char str[], int str_length);
+int streqClose(char str[], int str_length);
 
 #endif /* MISH_H */

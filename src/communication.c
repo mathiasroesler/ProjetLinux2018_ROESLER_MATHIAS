@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <signal.h>
 #include <errno.h>
 
 #include <arpa/inet.h>
@@ -22,6 +23,8 @@
  * Date: December 2018
 */
 
+int SIGNAL = 0;
+
 int serverCommunication(int client1_sock, int client2_sock)
 /* Function called in the server program to set up 
  * communication between two clients.
@@ -30,6 +33,8 @@ int serverCommunication(int client1_sock, int client2_sock)
 	char client1_buffer[BUFFER_SIZE];
 	char client2_buffer[BUFFER_SIZE];
 	int nb1, nb2;
+
+	signal(SIGUSR1, sigHandlerChild); // Set trap for signal SIGUSR1
 
 	/* Signal clients that they are connected */
 	write(client1_sock, "1", sizeof("1"));
@@ -40,7 +45,7 @@ int serverCommunication(int client1_sock, int client2_sock)
 	nb1=read(client1_sock, client1_buffer, NAME_SIZE);
 
 	if (nb1 == 0)
-	/* If client1 exits prematurely end connection */
+	/* If client1 exited prematurely, end connection */
 	{
 		write(client2_sock, "exit\n", NAME_SIZE);
 		return -1;
@@ -50,7 +55,7 @@ int serverCommunication(int client1_sock, int client2_sock)
 	nb2=read(client2_sock, client2_buffer, NAME_SIZE);
 
 	if (nb2 == 0)
-	/* If client2 exits prematurely end connection */
+	/* If client2 exited prematurely, end connection */
 	{
 		write(client1_sock, "exit\n", NAME_SIZE);
 		return -1;
@@ -62,7 +67,16 @@ int serverCommunication(int client1_sock, int client2_sock)
 	{
 		read(client1_sock, client1_buffer, BUFFER_SIZE);	// Get message from client 1
 
-		if (streq(client1_buffer, strlen(client1_buffer)) == 0)
+		if (SIGNAL == 1)
+		/* If server is closing */
+		{
+			/* Send closing message to clients */
+			write(client2_sock, "close", BUFFER_SIZE);
+			write(client1_sock, "close", BUFFER_SIZE);
+			break;
+		}
+
+		if (streqExit(client1_buffer, strlen(client1_buffer)) == 0)
 		/* If client1 sends the message exit */
 		{
 			write(client2_sock, client1_buffer, BUFFER_SIZE);
@@ -70,9 +84,19 @@ int serverCommunication(int client1_sock, int client2_sock)
 		}
 
 		write(client2_sock, client1_buffer, BUFFER_SIZE);	// Send message to client 2
+		
 		read(client2_sock, client2_buffer, BUFFER_SIZE);	// Get answer from client 2
 
-		if (streq(client2_buffer, strlen(client1_buffer)) == 0)
+		if (SIGNAL == 1)
+		/* If server is closing */
+		{
+			/* Send closing message to clients */
+			write(client2_sock, "close", BUFFER_SIZE);
+			write(client1_sock, "close", BUFFER_SIZE);
+			break;
+		}
+
+		if (streqExit(client2_buffer, strlen(client1_buffer)) == 0)
 		/* If client2 sends the message exit */
 		{
 			write(client1_sock, client2_buffer, BUFFER_SIZE);
@@ -81,6 +105,7 @@ int serverCommunication(int client1_sock, int client2_sock)
 
 		write(client1_sock, client2_buffer, BUFFER_SIZE);	// Send answer to client 1
 	}
+
 	return 0;
 }
 
@@ -96,7 +121,7 @@ int clientCommunication(int peer_sock)
 	int name_size=0, num=0;
 
 	printf("Welcome, please enter your name:\n");
-	fgets(name, BUFFER_SIZE, stdin);		// Get client name
+	fgets(name, NAME_SIZE, stdin);		// Get client name
 
 	printf("\nThank you, waiting for another client...\n");
 	read(peer_sock, client_num, sizeof("1")); 	// Wait until another client is connected
@@ -114,8 +139,8 @@ int clientCommunication(int peer_sock)
 	{
 		read(peer_sock, buffer, NAME_SIZE);		// Get other client name
 
-		if (streq(buffer, strlen(buffer)) == 0)
-		/* If client2 exits prematurely end connection */
+		if (streqExit(buffer, strlen(buffer)) == 0)
+		/* If client2 exits prematurely, end connection */
 		{
 			printf("Error with connection, please try to connect again.\n");
 			return -1;
@@ -137,7 +162,7 @@ int clientCommunication(int peer_sock)
 			printf("> %s", name);
 			fgets(buffer, BUFFER_SIZE, stdin); 	// Recuperate message from input
 
-			if (streq(buffer, strlen(buffer)) == 0)
+			if (streqExit(buffer, strlen(buffer)) == 0)
 			/* If message is exit */
 			{
 				write(peer_sock, buffer, BUFFER_SIZE);
@@ -151,13 +176,21 @@ int clientCommunication(int peer_sock)
 			write(peer_sock, message, BUFFER_SIZE); // Send message
 			read(peer_sock, buffer, BUFFER_SIZE); 	// Recieve message
 
-			if (streq(buffer, strlen(buffer)) == 0)
+			if (streqClose(buffer, strlen(buffer)) == 0)
+			{
+				printf("\nThe server is closing, the connection has been terminated.\n");
+				write(peer_sock, "close", BUFFER_SIZE);
+				break;
+			}
+
+			else if (streqExit(buffer, strlen(buffer)) == 0)
+			/* If message is exit */
 			{
 				printf("The connection was terminated by other client.\n");
 				break;
 			}
 
-			printf("> %s", buffer);			
+			printf("> %s", buffer);	
 		}
 	}
 
@@ -166,8 +199,8 @@ int clientCommunication(int peer_sock)
 	{
 		read(peer_sock, buffer, NAME_SIZE);		// Get other client name
 
-		if (streq(buffer, strlen(buffer)) == 0)
-		/* If client1 exits prematurely end connection */
+		if (streqExit(buffer, strlen(buffer)) == 0)
+		/* If client1 exits prematurely, end connection */
 		{
 			printf("Error with connection, please try to connect again.\n");
 			return -1;
@@ -184,7 +217,15 @@ int clientCommunication(int peer_sock)
 		{
 			read(peer_sock, buffer, BUFFER_SIZE); 	// Recieve message
 
-			if (streq(buffer, strlen(buffer)) == 0)
+			if (streqClose(buffer, strlen(buffer)) == 0)
+			{
+				printf("\nThe server is closing, the connection has been terminated.\n");
+				write(peer_sock, "close", BUFFER_SIZE);
+				break;
+			}
+
+			else if (streqExit(buffer, strlen(buffer)) == 0)
+			/* If message is exit */
 			{
 				printf("The connection was terminated by other client.\n");
 				break;
@@ -199,7 +240,7 @@ int clientCommunication(int peer_sock)
 			printf("> %s", name);
 			fgets(buffer, BUFFER_SIZE, stdin); 	// Recuperate message from input
 			
-			if (streq(buffer, strlen(buffer)) == 0)
+			if (streqExit(buffer, strlen(buffer)) == 0)
 			/* If message is exit */
 			{
 				write(peer_sock, buffer, BUFFER_SIZE);
@@ -215,4 +256,23 @@ int clientCommunication(int peer_sock)
 	}
 
 	return 0;
+}
+
+void sigHandlerChild(int sig_num)
+/* Signal handler function for SIGUSR1.
+ * Changes the value of SIGNAL to start the
+ * closing routine.
+*/
+{
+	if (sig_num == -1)
+	{
+		printf("Signal unrecognized\n");
+		perror("Error");
+		exit(1);
+	}
+
+	else if (sig_num == SIGUSR1)
+	{
+		SIGNAL = 1;
+	}
 }
