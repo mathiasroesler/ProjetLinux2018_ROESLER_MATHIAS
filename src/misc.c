@@ -30,7 +30,7 @@ int printSocketInfo(int sock)
 	if (getsockname(sock, (struct sockaddr*) &address, &length) == -1)
 	/* Retrieve socket information and store it in address */
 	{
-		printf("Unable to retrieve the information of socket %d\n", sock);
+		printf("Unable to retrieve the information of socket number %d\n", sock);
 		perror("Error");
 		return -1;
 	}
@@ -50,7 +50,7 @@ int printPeerInfo(int sock)
 	if (getpeername(sock, (struct sockaddr*) &address, &length) == -1)
 	/* Retrieve socket information and store it in address */
 	{
-		printf("Unable to retrieve the information of peer %d\n", sock);
+		printf("Unable to retrieve the information of peer socket number %d\n", sock);
 		perror("Error");
 		return -1;
 	}
@@ -61,9 +61,8 @@ int printPeerInfo(int sock)
 	return 0;
 }
 
-
 int streqExit(char str[], int str_length)
-/* Compares str with the exit. */
+/* Compares str with the word exit. */
 {
 	char str_exit[]="exit\n";
 	int exit_length=strlen(str_exit);
@@ -85,7 +84,7 @@ int streqExit(char str[], int str_length)
 }
 
 int streqClose(char str[], int str_length)
-/* Compares str with the exit. */
+/* Compares str with the word close. */
 {
 	char str_close[]="close";
 	int close_length=strlen(str_close);
@@ -98,6 +97,28 @@ int streqClose(char str[], int str_length)
 	for (int i=0; i<str_length; ++i)
 	{
 		if (str[i] != str_close[i])
+		{
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+int streqDisconnected(char str[], int str_length)
+/* Compares str with the word disconnected. */
+{
+	char str_disconnected[]="disconnected";
+	int disconnected_length=strlen(str_disconnected);
+
+	if (str_length != disconnected_length)
+	{
+		return -1;
+	}
+
+	for (int i=0; i<str_length; ++i)
+	{
+		if (str[i] != str_disconnected[i])
 		{
 			return -1;
 		}

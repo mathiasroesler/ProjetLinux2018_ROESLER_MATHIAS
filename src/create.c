@@ -44,7 +44,7 @@ int createSocket(char *ip, char *port, int flag)
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 
 	if (sock == -1)
-	// Check the creation of the socket
+	/* Check the creation of the socket */
 	{
 		close(sock);
 		printf("Unable to create socket\n");
@@ -60,7 +60,7 @@ int createSocket(char *ip, char *port, int flag)
 	if (flag == BIND)
 	{
 		if (bind(sock, (struct sockaddr*) &address, length) == -1)
-		// Check the binding of the socket
+		/* Check the binding of the socket */
 		{
 			close(sock);
 			printf("Unable to bind socket %d\n", sock);
@@ -72,7 +72,7 @@ int createSocket(char *ip, char *port, int flag)
 	else if (flag == CONNECT)
 	{
 		if (connect(sock, (struct sockaddr*) &address, length) == -1)
-		// Check the connection of the socket
+		/* Check the connection of the socket */
 		{
 			close(sock);
 			printf("Unable to connect socket %d\n", sock);
@@ -105,7 +105,11 @@ void createServer(int sock)
 		do
 		/* Wait for two clients to connect */
 		{
-			while(NB_CONNECTION == MAX_CONNECTION); // Wait until connection is available
+			if (NB_CONNECTION == MAX_CONNECTION)
+			/* Wait until connection is available */
+			{
+				pause(); // Pause the father until two clients are disconnected
+			}
 
 			peer_sock = accept(sock, (struct sockaddr*) &address, &length);
 
@@ -172,7 +176,7 @@ void sigHandler(int sig_nb)
  * be sent to the father.
 */
 {
-	int status=0, i=0;
+	int i=0;
 
 	if (sig_nb == -1)
 	{
@@ -186,7 +190,7 @@ void sigHandler(int sig_nb)
 
 	case SIGTSTP:
 	/* Reduce number of connections when a child is done */
-		signal(SIGTSTP, sigHandler);	// Reset trap for SIGUSR1
+		signal(SIGTSTP, sigHandler);	// Reset trap for SIGUSTP
 
 		NB_CONNECTION -= 2;
 		break;
@@ -207,14 +211,12 @@ void sigHandler(int sig_nb)
 		break;
 
 	case SIGUSR1:
-	/* Terminated the server and warn children */	
+	/* Terminate the server and warn children */	
 		for (i=0; i<MAX_CONNECTION/2; ++i)
 		{
 			kill(PID_ARRAY[i], SIGUSR1);
-			wait(&status);
 		}
 
-		printf("Closing server\n");
 		kill(getpid(), SIGTERM);
 		break;
 	}
