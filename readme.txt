@@ -1,4 +1,4 @@
-README pour le projet de programmation système Unix
+README pour le projet de programmation et systèmes sous Linux
 Auteur : Mathias ROESLER
 Date : Décembre 2018
 
@@ -20,6 +20,12 @@ Le répertoire ProjetLinux2018_ROESLER_MATHIAS contient les éléments suivants 
 	- server.c : fichier .c qui crée l'exécutable server ;
 	- client.c : fichier .c qui crée l'exécutable client ;
 	- makefile : fichier servant à la compilation du projet.
+
+Le serveur peut accepter au maximum 4 connexions. Cette limite est fixée par
+la variable MAX_CONNECTION qui est définie dans le fichier create.h situé dans
+le dossier include. La variable peut être changée à tout moment pour augmenter
+le nombre maximal de connexions, la recompilation du projet est alors
+nécessaire.
 
 *-------------------------------------- *
 *		COMPILATION		*	

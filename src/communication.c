@@ -250,7 +250,7 @@ int clientSetup(int peer_sock, char buffer[], char name[])
 		if (streqExit(buffer, strlen(buffer)) == 0)
 		/* If other client exits prematurely, end connection */
 		{
-			printf("Error with the other client connection, please try to connect again.\n");
+			printf("\nError with the other client connection, please try to connect again.\n");
 			return -1;
 		}
 	
@@ -270,7 +270,7 @@ int clientSetup(int peer_sock, char buffer[], char name[])
 		if (streqExit(buffer, strlen(buffer)) == 0)
 		/* If other client exits prematurely, end connection */
 		{
-			printf("Error with the other client connection, please try to connect again.\n");
+			printf("\nError with the other client connection, please try to connect again.\n");
 			return -1;
 		}
 	
