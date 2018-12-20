@@ -87,7 +87,7 @@ int createSocket(char *ip, char *port, int flag)
 void createServer(int sock)
 /* Function called to create a server. */
 {
-	int peer_sock=0, i=0;
+	int peer_sock=0, i=0, status=0;
 	int peer_sock_mem[MAX_CONNECTION];
 	struct sockaddr_in address;
 	socklen_t length=sizeof(struct sockaddr_in);
@@ -108,7 +108,7 @@ void createServer(int sock)
 			if (NB_CONNECTION == MAX_CONNECTION)
 			/* Wait until connection is available */
 			{
-				pause(); // Pause the father until two clients are disconnected
+				wait(&status); // Pause the father until two clients are disconnected
 			}
 
 			peer_sock = accept(sock, (struct sockaddr*) &address, &length);
